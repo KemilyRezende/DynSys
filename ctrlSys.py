@@ -56,9 +56,9 @@ def plots(system, control, type):
     plt.ylabel('Amplitude')
     plt.grid(True)
 
-    # Plotando o Diagrama de Bode para o sistema em malha fechada
+    # Plotando o Diagrama de Bode para o sistema 
     plt.figure()
-    ctrl.bode(closed_loop, dB=True, Hz=False, deg=True)
+    ctrl.bode(open_loop, dB=True, Hz=False, deg=True)
     plt.suptitle(f'Diagrama de Bode com Compensador {type}')
     plt.show()
 
