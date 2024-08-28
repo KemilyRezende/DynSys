@@ -32,10 +32,9 @@ def controler(Kp = 1, Ki = 0, Kd = 0, type = 'P', T = None):
         
 
 def firstOrder(K=1, tau=1, T=None):
-    if T is None:
-        system = ctrl.TransferFunction([K], [tau, 1])
-    else:
-        system = ctrl.TransferFunction([K*(-m.exp(-T/tau)+1), K*(m.exp(-T/tau)-1), 0], [1, (-m.exp(-T/tau)-1), m.exp(-T/tau), 0], T)
+    system = ctrl.TransferFunction([K], [tau, 1])
+    if T is not None:
+        system = ctrl.sample_system(system, T, method='zoh')
     return system
 
 def plots(system, control, type):
@@ -70,7 +69,7 @@ def dynsyn(K = 1, tau = 1, T = None, type = 'P', Kp = 1, Ki = 0, Kd = 0):
 # Caso de teste
 K = 1
 tau = 1
-T = None
+T = 0.5
 Kp = 0.5
 Ki = 0.2
 Kd = 0.1
