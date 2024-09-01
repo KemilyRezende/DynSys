@@ -3,6 +3,7 @@ from flask_cors import CORS
 import control as ctrl 
 import matplotlib.pyplot as plt
 import math as m
+import re
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}) 
@@ -47,6 +48,11 @@ def firstOrder(K=1, tau=1, T=None):
         system = ctrl.sample_system(system, T, method='zoh')
     return system
 
+def clean_transfer_function(tf_str):
+    lines = tf_str.splitlines()
+    cleaned_lines = [line for line in lines if not (line.startswith("Inputs") or line.startswith("Outputs") or line.startswith("<") or line.startswith("dt"))]
+    return "\n".join(cleaned_lines)
+
 @app.route('/api/dynsyn', methods=['POST'])
 def dynsyn():
     data = request.json
@@ -89,12 +95,20 @@ def dynsyn():
         'frequency': omega.tolist() # x: frequency msm coisa para os dois
     }
 
+    system_str = clean_transfer_function(str(system))
+    closed_loop_str = clean_transfer_function(str(closed_loop))
+
+    
+    print(system_str)
+    print(closed_loop_str)
+
+
     return jsonify({
         'step_response': step_response,
         'root_locus': root_locus,
-        'bode': bode
-        #'system': system, # FT original
-        #'closed_loop': closed_loop # FT controlada
+        'bode': bode,
+        'system': system_str, # FT original
+        'closed_loop': closed_loop_str # FT controlada
     })
 
 
