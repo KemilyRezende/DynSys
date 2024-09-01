@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste controle</title>
+</head>
+<body>
+    <div id="values">
+        <select name="" id="analise">
+            <option value="cont">Contínua</option>
+            <option value="disc">Discreta</option>
+        </select>
+        <label for="T">Amostragem:</label>
+        <input id="T" type="number">
+        <label for="K">Ganho:</label>
+        <input id="K" type="number">
+        <label for="tau">Tau:</label>
+        <input id="tau" type="number">
+        <select name="" id="control">
+            <option value="P">P</option>
+            <option value="PI">PI</option>
+            <option value="PD">PD</option>
+            <option value="PID">PID</option>
+        </select>
+        <label for="Kp">Kp:</label>
+        <input id="Kp" type="number">
+        <label for="Ki">Ki:</label>
+        <input id="Ki" type="number">
+        <label for="Kd">Kd:</label>
+        <input id="Kd" type="number">
+
+        <button onclick="dynSys()">Simular</button>
+    </div> 
+
+    <div id="fts">
+        <div id="originalFT"><p>FT Original</p><p id="displayOriginalFT"></p></div>
+        <div id="controlledFT">FT Controlada<p id="displayControlledFT"></p></div>
+    </div>
+
+    <div id="plots">
+        <div id="degrau">Degrau</div>
+        <div id="lgr">LGR</div>
+        <div id="bode">Bode</div>
+        <style>
+            #degrau, #lgr, #bode {
+                width: 500px;
+                height: 500px;
+            }
+        </style>
+    </div>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        async function dynSys(){
+            var analise = document.getElementById("analise").value;
+            var t = document.getElementById("T").value;
+            var k = document.getElementById("K").value;
+            k = Number(k);
+            var tau = document.getElementById("tau").value;
+            tau = Number(tau);
+            var type = document.getElementById("control").value;
+            var Kp = document.getElementById("Kp").value;
+            Kp = Number(Kp);
+            var Ki = document.getElementById("Ki").value;
+            Ki = Number(Ki);
+            var Kd = document.getElementById("Kd").value;
+            Kd = Number(Kd);
+            if (analise == "cont") t = null; // Os outros até vai agora esse valor tem que tratar
+            else t = Number(t); // TEM que transformar em number
+            console.log(analise, k, tau, t, Kp, Ki, Kd, type)
+
+            const data = {
+                K: k,
+                tau: tau,
+                T: t,
+                Kp: Kp,
+                Ki: Ki,
+                Kd: Kd,
+                type: type
+            };
+
+            try {
+                const response = await fetch('http://localhost:5000/api/dynsyn', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                console.log(result);
+
+                //document.getElementById("displayOriginalFT").textContent(result.system);
+                //document.getElementById("displayControlledFT").textContent(result.closed_loop);
+
+
+                // Plotar Resposta ao Degrau
+                Plotly.newPlot('degrau', [{
+                    x: result.step_response.time,
+                    y: result.step_response.response,
+                    type: 'scatter',
+                    mode: 'lines',
+                    marker: { color: '#2191ED' },
+                }], {
+                    title: 'Step Response'
+                });
+
+                // Plotar LGR
+                if(t != null){
+                    const unitCircle = {
+                        x: [],
+                        y: [],
+                        mode: 'lines',
+                        name: 'Unit Circle',
+                        line: { dash: 'dash', color: '#000' }
+                    };
+                    const theta = Array.from(Array(361).keys()).map(x => x * Math.PI / 180); // de 0 a 360 graus
+                    unitCircle.x = theta.map(t => Math.cos(t));
+                    unitCircle.y = theta.map(t => Math.sin(t));
+
+                    // Plotar LGR com círculo unitário
+                    Plotly.newPlot('lgr', [
+                    {
+                        x: result.root_locus.poles,
+                        y: Array(result.root_locus.poles.length).fill(0),
+                        mode: 'markers',
+                        name: 'Poles',
+                        marker: { color: '#ED9C21' },
+                    },
+                    {
+                        x: result.root_locus.zeros,
+                        y: Array(result.root_locus.zeros.length).fill(0),
+                        mode: 'markers',
+                        name: 'Zeros',
+                        marker: { color: '#2191ED' },
+                    },
+                    unitCircle // Adicionar círculo unitário
+                    ], {
+                    title: 'Root Locus'
+                });}
+                else{
+                    Plotly.newPlot('lgr', [
+                        {
+                            x: result.root_locus.poles,
+                            y: Array(result.root_locus.poles.length).fill(0),
+                            mode: 'markers',
+                            name: 'Poles',
+                            marker: { color: '#ED9C21' },
+                        },
+                        {
+                            x: result.root_locus.zeros,
+                            y: Array(result.root_locus.zeros.length).fill(0),
+                            mode: 'markers',
+                            name: 'Zeros',
+                            marker: { color: '#2191ED' },
+                        }
+                    ], {
+                        title: 'Root Locus'
+                    });
+                }
+                // Plotar Diagrama de Bode
+                Plotly.newPlot('bode', [
+                    {
+                        x: result.bode.frequency,
+                        y: result.bode.magnitude,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Magnitude',
+                        marker: { color: '#2191ED' },
+                    },
+                    {
+                        x: result.bode.frequency,
+                        y: result.bode.phase,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Phase',
+                        marker: { color: '#ED9C21' },
+                    }
+                ], {
+                    title: 'Bode Plot'
+                });
+
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        }
+    </script>
+</body>
+</html>
