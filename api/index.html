@@ -126,14 +126,14 @@
                         y: Array(result.root_locus.poles.length).fill(0),
                         mode: 'markers',
                         name: 'Poles',
-                        marker: { color: '#ED9C21' },
+                        marker: { color: '#ED9C21', symbol: 'x' },
                     },
                     {
                         x: result.root_locus.zeros,
                         y: Array(result.root_locus.zeros.length).fill(0),
                         mode: 'markers',
                         name: 'Zeros',
-                        marker: { color: '#2191ED' },
+                        marker: { color: '#2191ED'},
                     },
                     unitCircle // Adicionar círculo unitário
                     ], {
@@ -146,7 +146,7 @@
                             y: Array(result.root_locus.poles.length).fill(0),
                             mode: 'markers',
                             name: 'Poles',
-                            marker: { color: '#ED9C21' },
+                            marker: { color: '#ED9C21', symbol: 'x'  },
                         },
                         {
                             x: result.root_locus.zeros,
@@ -159,27 +159,55 @@
                         title: 'Root Locus'
                     });
                 }
-                // Plotar Diagrama de Bode
+
+                // Diagrama de Bode
                 Plotly.newPlot('bode', [
-                    {
-                        x: result.bode.frequency,
-                        y: result.bode.magnitude,
-                        type: 'scatter',
-                        mode: 'lines',
-                        name: 'Magnitude',
-                        marker: { color: '#2191ED' },
-                    },
-                    {
-                        x: result.bode.frequency,
-                        y: result.bode.phase,
-                        type: 'scatter',
-                        mode: 'lines',
-                        name: 'Phase',
-                        marker: { color: '#ED9C21' },
-                    }
-                ], {
-                    title: 'Bode Plot'
-                });
+                {
+                    x: result.bode.frequency,
+                    y: result.bode.magnitude,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Magnitude',
+                    line: { color: '#2191ED' },
+                    xaxis: 'x1',
+                    yaxis: 'y1'
+                },
+                {
+                    x: result.bode.frequency,
+                    y: result.bode.phase,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Phase',
+                    line: { color: '#ED9C21' },
+                    xaxis: 'x2',
+                    yaxis: 'y2'
+                }
+            ], {
+                grid: { rows: 2, columns: 1, pattern: 'independent' },
+                title: 'Bode Plot',
+                xaxis: {
+                    title: 'Frequency (rad/s)',
+                    domain: [0, 1],
+                    anchor: 'y1'
+                },
+                yaxis: {
+                    title: 'Magnitude (dB)',
+                    titlefont: { color: '#2191ED' },
+                    tickfont: { color: '#2191ED' },
+                    domain: [0.5, 1]
+                },
+                xaxis2: {
+                    title: 'Frequency (rad/s)',
+                    domain: [0, 1],
+                    anchor: 'y2'
+                },
+                yaxis2: {
+                    title: 'Phase (degrees)',
+                    titlefont: { color: '#ED9C21' },
+                    tickfont: { color: '#ED9C21' },
+                    domain: [0, 0.5]
+                }
+            });
 
             } catch (error) {
                 console.error('Erro:', error);
