@@ -34,8 +34,8 @@
     </div> 
 
     <div id="fts">
-        <div id="originalFT"><p>FT Original</p><p id="displayOriginalFT"></p></div>
-        <div id="controlledFT">FT Controlada<p id="displayControlledFT"></p></div>
+        <div id="originalFT"><p>FT Original</p><pre id="displayOriginalFT"></pre></div>
+        <div id="controlledFT"><p>FT Controlada</p><pre id="displayControlledFT"></pre></div>
     </div>
 
     <div id="plots">
@@ -91,8 +91,8 @@
                 const result = await response.json();
                 console.log(result);
 
-                //document.getElementById("displayOriginalFT").textContent(result.system);
-                //document.getElementById("displayControlledFT").textContent(result.closed_loop);
+                document.getElementById("displayOriginalFT").textContent = result.system.replace(/\n/g, '\n');
+                document.getElementById("displayControlledFT").textContent = result.closed_loop.replace(/\n/g, '\n');
 
 
                 // Plotar Resposta ao Degrau
