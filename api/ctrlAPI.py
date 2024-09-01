@@ -3,7 +3,7 @@ from flask_cors import CORS
 import control as ctrl 
 import matplotlib.pyplot as plt
 import math as m
-import re
+import numpy as np
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}) 
@@ -89,9 +89,10 @@ def dynsyn():
 
     # Informações Diagrama de Bode
     mag, phase, omega = ctrl.bode(open_loop, plot=False)
+    phase_degrees = [m.degrees(phase_i) for phase_i in phase]
     bode = {
-        'magnitude': mag.tolist(), # y: magnitude (grafico de cima)
-        'phase': phase.tolist(), # y: phase
+        'magnitude': [20 * np.log10(val) if val > 0 else -np.inf for val in mag],  # y: magnitude (grafico de cima)
+        'phase': phase_degrees, # y: phase
         'frequency': omega.tolist() # x: frequency msm coisa para os dois
     }
 
