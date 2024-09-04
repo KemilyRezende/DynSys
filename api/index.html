@@ -34,8 +34,8 @@
     </div> 
 
     <div id="fts">
-        <div id="originalFT"><p>FT Original</p><pre id="displayOriginalFT"></pre></div>
-        <div id="controlledFT"><p>FT Controlada</p><pre id="displayControlledFT"></pre></div>
+        <div id="originalFT"><p>FT Original</p><p id="system_num"></p><p id="system_den"></p></div>
+        <div id="controlledFT"><p>FT Controlada</p><p id="controlled_num"></p><p id="controlled_den"></p></div>
     </div>
 
     <div id="plots">
@@ -91,8 +91,10 @@
                 const result = await response.json();
                 console.log(result);
 
-                document.getElementById("displayOriginalFT").textContent = result.system.replace(/\n/g, '\n');
-                document.getElementById("displayControlledFT").textContent = result.closed_loop.replace(/\n/g, '\n');
+                document.getElementById("system_num").textContent = result.system.num.replace(/\n/g, '\n');
+                document.getElementById("system_den").textContent = result.system.den.replace(/\n/g, '\n');
+                document.getElementById("controlled_num").textContent = result.closed.num.replace(/\n/g, '\n');
+                document.getElementById("controlled_den").textContent = result.closed.den.replace(/\n/g, '\n');
 
 
                 // Plotar Resposta ao Degrau
@@ -108,57 +110,52 @@
 
                 // Plotar LGR
                 if(t != null){
-                    const unitCircle = {
-                        x: [],
-                        y: [],
-                        mode: 'lines',
-                        name: 'Unit Circle',
-                        line: { dash: 'dash', color: '#000' }
-                    };
-                    const theta = Array.from(Array(361).keys()).map(x => x * Math.PI / 180); // de 0 a 360 graus
-                    unitCircle.x = theta.map(t => Math.cos(t));
-                    unitCircle.y = theta.map(t => Math.sin(t));
-
                     // Plotar LGR com círculo unitário
                     Plotly.newPlot('lgr', [
+                        {
+                            x: result.root_locus.poles.map(p => p[0]),  // Parte real dos polos
+                            y: result.root_locus.poles.map(p => p[1]),  // Parte imaginária dos polos
+                            mode: 'markers',
+                            name: 'Poles',
+                            marker: { color: '#ED9C21', symbol: 'x' },
+                        },
+                        {
+                            x: result.root_locus.zeros.map(z => z[0]),  // Parte real dos zeros
+                            y: result.root_locus.zeros.map(z => z[1]),  // Parte imaginária dos zeros
+                            mode: 'markers',
+                            name: 'Zeros',
+                            marker: { color: '#2191ED' },
+                        },
+                        {
+                            x: result.unit_circle.x,
+                            y: result.unit_circle.y,
+                            mode: 'lines',
+                            name: 'Círculo Unitário',
+                            line: { dash: 'dash', color: '#000' }
+                    }
+                ], {
+                title: 'Root Locus'
+                });}
+                else{
+                    Plotly.newPlot('lgr', [
                     {
-                        x: result.root_locus.poles,
-                        y: Array(result.root_locus.poles.length).fill(0),
+                        x: result.root_locus.poles.map(p => p[0]),  // Parte real dos polos
+                        y: result.root_locus.poles.map(p => p[1]),  // Parte imaginária dos polos
                         mode: 'markers',
                         name: 'Poles',
                         marker: { color: '#ED9C21', symbol: 'x' },
                     },
                     {
-                        x: result.root_locus.zeros,
-                        y: Array(result.root_locus.zeros.length).fill(0),
+                        x: result.root_locus.zeros.map(z => z[0]),  // Parte real dos zeros
+                        y: result.root_locus.zeros.map(z => z[1]),  // Parte imaginária dos zeros
                         mode: 'markers',
                         name: 'Zeros',
-                        marker: { color: '#2191ED'},
+                        marker: { color: '#2191ED' },
                     },
-                    unitCircle // Adicionar círculo unitário
-                    ], {
+                ], {
                     title: 'Root Locus'
-                });}
-                else{
-                    Plotly.newPlot('lgr', [
-                        {
-                            x: result.root_locus.poles,
-                            y: Array(result.root_locus.poles.length).fill(0),
-                            mode: 'markers',
-                            name: 'Poles',
-                            marker: { color: '#ED9C21', symbol: 'x'  },
-                        },
-                        {
-                            x: result.root_locus.zeros,
-                            y: Array(result.root_locus.zeros.length).fill(0),
-                            mode: 'markers',
-                            name: 'Zeros',
-                            marker: { color: '#2191ED' },
-                        }
-                    ], {
-                        title: 'Root Locus'
-                    });
-                }
+                });
+            }
 
                 // Diagrama de Bode
                 Plotly.newPlot('bode', [
