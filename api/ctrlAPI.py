@@ -49,9 +49,18 @@ def firstOrder(K=1, tau=1, T=None):
     return system
 
 def clean_transfer_function(tf_str):
+    # Divida a string em linhas
     lines = tf_str.splitlines()
-    cleaned_lines = [line for line in lines if not (line.startswith("Inputs") or line.startswith("Outputs") or line.startswith("<") or line.startswith("dt"))]
-    return "\n".join(cleaned_lines)
+    
+    # Filtrar as linhas que não são relevantes para a função de transferência
+    cleaned_lines = [line.strip() for line in lines if line.strip() and not (
+        line.startswith("Inputs") or line.startswith("Outputs") or 
+        line.startswith("<") or line.startswith("dt"))]
+    
+    # A função de transferência deve ter pelo menos duas linhas: uma para o numerador e outra para o denominador
+    numerador = cleaned_lines[0]
+    denominador = cleaned_lines[2]
+    return numerador, denominador
 
 @app.route('/api/dynsyn', methods=['POST'])
 def dynsyn():
@@ -85,7 +94,11 @@ def dynsyn():
         zeros = []
         print("Unexpected pzmap return format")
 
-    root_locus = {'poles': [p.real for p in poles], 'zeros': [z.real for z in zeros]}
+    root_locus = {'poles': [(p.real, p.imag) for p in poles], 'zeros': [(z.real, z.imag) for z in zeros]}
+    theta = np.linspace(0, 2 * np.pi, 361)  # 361 pontos para garantir que o círculo seja fechado
+    unit_circle_x = np.cos(theta).tolist()
+    unit_circle_y = np.sin(theta).tolist()
+    print(root_locus)
 
     # Informações Diagrama de Bode
     mag, phase, omega = ctrl.bode(open_loop, plot=False)
@@ -96,20 +109,20 @@ def dynsyn():
         'frequency': omega.tolist() # x: frequency msm coisa para os dois
     }
 
-    system_str = clean_transfer_function(str(system))
-    closed_loop_str = clean_transfer_function(str(closed_loop))
-
+    system_num, system_den = clean_transfer_function(str(system))
+    closed_num, closed_den = clean_transfer_function(str(closed_loop))
     
-    print(system_str)
-    print(closed_loop_str)
+    
+
 
 
     return jsonify({
         'step_response': step_response,
         'root_locus': root_locus,
+        'unit_circle': {'x': unit_circle_x, 'y': unit_circle_y},
         'bode': bode,
-        'system': system_str, # FT original
-        'closed_loop': closed_loop_str # FT controlada
+        'system': {'num': system_num, 'den': system_den}, # FT original
+        'closed': {'num': closed_num, 'den': closed_den} # FT controlada
     })
 
 
