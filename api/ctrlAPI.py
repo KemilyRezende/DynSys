@@ -6,7 +6,7 @@ import math as m
 import numpy as np
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}}) 
+CORS(app) 
 
 # Cria o controlador:
 def controler(Kp = 1, Ki = 0, Kd = 0, type = 'P', T = None):
@@ -48,6 +48,16 @@ def firstOrder(K=1, tau=1, T=None):
         system = ctrl.sample_system(system, T, method='zoh')
     return system
 
+# Cria a função de segunda ordem
+def secondOrder(Ksi=1, Omn=1, T=None):
+    Ksi = float(Ksi)
+    Omn = float(Omn)
+    system = ctrl.TransferFunction([Omn*Omn], [1, 2*Ksi*Omn, Omn*Omn])
+    if T is not None:
+        T = float(T)
+        system = ctrl.sample_system(system, T, method='zoh')
+    return system
+
 def clean_transfer_function(tf_str):
     # Divida a string em linhas
     lines = tf_str.splitlines()
@@ -62,7 +72,27 @@ def clean_transfer_function(tf_str):
     denominador = cleaned_lines[2]
     return numerador, denominador
 
-@app.route('/api/dynsyn', methods=['POST'])
+def replace_negative_infinity(value):
+    return value if value != -np.inf else 0
+    
+def max_absolute_pole_zero(poles, zeros):
+    poles = list(poles) if poles is not None else []
+    zeros = list(zeros) if zeros is not None else []
+    
+    # Combine polos e zeros
+    combined = poles + zeros
+    
+    if not combined:
+        return {'x_max': 1, 'y_max': 1}
+    
+    # Obter o maior valor absoluto dos eixos real e imaginário
+    x_max = max(abs(p.real) for p in combined) if combined else 1
+    y_max = max(abs(p.imag) for p in combined) if combined else 1
+
+    m = max(abs(x_max), abs(y_max))
+    return m
+
+@app.route('/graficos', methods=['POST'])
 def dynsyn():
     data = request.json
 
@@ -73,8 +103,14 @@ def dynsyn():
     Ki = float(data['Ki'])
     Kd = float(data['Kd'])
     type = data['type']
+    Ksi = data['Ksi']
+    Omn = data['Omn']
 
-    system = firstOrder(K, tau, T)
+    if Ksi is None:
+        system = firstOrder(K, tau, T)
+    else:
+        system = secondOrder(Ksi, Omn, T)
+
     control = controler(Kp, Ki, Kd, type, T)
     open_loop = ctrl.series(system, control)
     closed_loop = ctrl.feedback(open_loop, 1)
@@ -85,7 +121,6 @@ def dynsyn():
 
     # Informações LGR
     pzmap = ctrl.pzmap(open_loop, plot=False)
-    print("pzmap return:", pzmap)
     if isinstance(pzmap, tuple) and len(pzmap) == 2:
         poles, zeros = pzmap
     else:
@@ -98,13 +133,13 @@ def dynsyn():
     theta = np.linspace(0, 2 * np.pi, 361)  # 361 pontos para garantir que o círculo seja fechado
     unit_circle_x = np.cos(theta).tolist()
     unit_circle_y = np.sin(theta).tolist()
-    print(root_locus)
+    max = max_absolute_pole_zero(poles, zeros)
 
     # Informações Diagrama de Bode
     mag, phase, omega = ctrl.bode(open_loop, plot=False)
     phase_degrees = [m.degrees(phase_i) for phase_i in phase]
     bode = {
-        'magnitude': [20 * np.log10(val) if val > 0 else -np.inf for val in mag],  # y: magnitude (grafico de cima)
+        'magnitude': [20 * np.log10(val) if val > 0 else 0 for val in mag],  # y: magnitude (grafico de cima)
         'phase': phase_degrees, # y: phase
         'frequency': omega.tolist() # x: frequency msm coisa para os dois
     }
@@ -112,19 +147,15 @@ def dynsyn():
     system_num, system_den = clean_transfer_function(str(system))
     closed_num, closed_den = clean_transfer_function(str(closed_loop))
     
-    
-
-
-
     return jsonify({
         'step_response': step_response,
         'root_locus': root_locus,
         'unit_circle': {'x': unit_circle_x, 'y': unit_circle_y},
         'bode': bode,
         'system': {'num': system_num, 'den': system_den}, # FT original
-        'closed': {'num': closed_num, 'den': closed_den} # FT controlada
+        'closed': {'num': closed_num, 'den': closed_den}, # FT controlada
+        'max': max
     })
 
-
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(port=5011, debug=True)
